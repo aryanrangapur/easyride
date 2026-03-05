@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 import RideCard from "./RideCard";
-import { AlertCircle, X, Car, Bike } from "lucide-react";
+import { AlertCircle, X, Car, Bike, Crown } from "lucide-react";
 
 function SkeletonCard() {
   return (
@@ -15,37 +15,47 @@ function SkeletonCard() {
           <div className="h-2.5 w-14 skeleton" />
         </div>
       </div>
-      {[1, 2].map((i) => (
-        <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-muted-light/30">
-          <div className="w-9 h-9 rounded-xl skeleton" />
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted-light/30">
+          <div className="w-8 h-8 rounded-lg skeleton" />
           <div className="flex-1 space-y-1.5">
-            <div className="h-3 w-24 skeleton" />
-            <div className="h-2.5 w-16 skeleton" />
+            <div className="h-3 w-28 skeleton" />
+            <div className="h-2.5 w-14 skeleton" />
           </div>
-          <div className="h-4 w-12 skeleton" />
-          <div className="w-8 h-8 rounded-xl skeleton" />
+          <div className="h-4 w-10 skeleton" />
+          <div className="w-7 h-7 rounded-lg skeleton" />
         </div>
       ))}
     </div>
   );
 }
 
+const AutoIcon = (
+  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="8" width="18" height="8" rx="2" />
+    <circle cx="7" cy="18" r="2" />
+    <circle cx="17" cy="18" r="2" />
+    <path d="M5 8l2-4h10l2 4" />
+  </svg>
+);
+
+const SuvIcon = (
+  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 17h14M3 11l2-5h14l2 5" />
+    <rect x="2" y="11" width="20" height="6" rx="2" />
+    <circle cx="6.5" cy="17" r="2.5" />
+    <circle cx="17.5" cy="17" r="2.5" />
+  </svg>
+);
+
 const MODE_FILTERS = [
   { key: "all", label: "All", icon: null },
-  { key: "car", label: "Cab", icon: <Car className="w-3.5 h-3.5" /> },
   { key: "bike", label: "Bike", icon: <Bike className="w-3.5 h-3.5" /> },
-  {
-    key: "auto",
-    label: "Auto",
-    icon: (
-      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="8" width="18" height="8" rx="2" />
-        <circle cx="7" cy="18" r="2" />
-        <circle cx="17" cy="18" r="2" />
-        <path d="M5 8l2-4h10l2 4" />
-      </svg>
-    ),
-  },
+  { key: "auto", label: "Auto", icon: AutoIcon },
+  { key: "car", label: "Cab", icon: <Car className="w-3.5 h-3.5" /> },
+  { key: "sedan", label: "Sedan", icon: <Car className="w-3.5 h-3.5" /> },
+  { key: "premium", label: "Premium", icon: <Crown className="w-3.5 h-3.5" /> },
+  { key: "suv", label: "SUV", icon: SuvIcon },
 ];
 
 export default function ResultsSection() {
@@ -53,6 +63,18 @@ export default function ResultsSection() {
     useAppStore();
 
   if (!isSearching && estimates.length === 0 && !error) return null;
+
+  // Filter modes and only show categories that have rides
+  const availableIcons = new Set<string>();
+  for (const est of estimates) {
+    for (const m of est.modes) {
+      availableIcons.add(m.icon);
+    }
+  }
+
+  const activeFilters = MODE_FILTERS.filter(
+    (f) => f.key === "all" || availableIcons.has(f.key)
+  );
 
   const filteredEstimates = estimates
     .map((est) => ({
@@ -63,6 +85,8 @@ export default function ResultsSection() {
           : est.modes.filter((m) => m.icon === selectedMode),
     }))
     .filter((est) => est.modes.length > 0);
+
+  const totalModes = filteredEstimates.reduce((sum, e) => sum + e.modes.length, 0);
 
   return (
     <div id="results" className="w-full max-w-lg mx-auto mt-6 scroll-mt-20">
@@ -84,20 +108,16 @@ export default function ResultsSection() {
         )}
       </AnimatePresence>
 
-      {/* Loading skeletons */}
+      {/* Loading */}
       {isSearching && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="space-y-4"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
           <div className="flex items-center justify-center gap-2 py-2">
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 rounded-full bg-primary bounce-dot" />
               <div className="w-2 h-2 rounded-full bg-primary bounce-dot" />
               <div className="w-2 h-2 rounded-full bg-primary bounce-dot" />
             </div>
-            <span className="text-[13px] text-muted font-medium">Comparing prices...</span>
+            <span className="text-[13px] text-muted font-medium">Comparing all ride types...</span>
           </div>
           <SkeletonCard />
           <SkeletonCard />
@@ -107,19 +127,15 @@ export default function ResultsSection() {
 
       {/* Results */}
       {!isSearching && filteredEstimates.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="space-y-4"
-        >
-          {/* Mode filter pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {MODE_FILTERS.map((f) => (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+          {/* Filter pills — horizontally scrollable */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollbarWidth: "none" }}>
+            {activeFilters.map((f) => (
               <motion.button
                 key={f.key}
                 whileTap={{ scale: 0.92 }}
                 onClick={() => setSelectedMode(f.key)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-semibold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all flex-shrink-0 ${
                   selectedMode === f.key
                     ? "gradient-bg text-white shadow-md shadow-primary/20"
                     : "bg-muted-light text-muted active:bg-primary/10"
@@ -130,6 +146,12 @@ export default function ResultsSection() {
               </motion.button>
             ))}
           </div>
+
+          {/* Count */}
+          <p className="text-[11px] text-muted">
+            Showing <span className="font-semibold text-foreground">{totalModes}</span> rides across{" "}
+            <span className="font-semibold text-foreground">{filteredEstimates.length}</span> services
+          </p>
 
           {/* Cards */}
           <AnimatePresence mode="popLayout">
@@ -143,14 +165,14 @@ export default function ResultsSection() {
             ))}
           </AnimatePresence>
 
-          {/* Footer note */}
+          {/* Footer */}
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
             className="text-[11px] text-muted text-center py-2"
           >
-            Tap any ride to book directly in the app with your locations pre-filled
+            Tap any ride to book directly in the app with locations pre-filled
           </motion.p>
         </motion.div>
       )}

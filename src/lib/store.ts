@@ -16,10 +16,11 @@ export interface RideEstimate {
 
 export interface RideMode {
   name: string;
-  icon: string;
+  icon: string;       // "bike" | "auto" | "car" | "sedan" | "suv" | "premium" | "shared"
+  tag?: string | null; // "Comfort" | "Premium" | "Luxury" | "6-seater" | "Shared" | "Economy"
   priceMin: number;
   priceMax: number;
-  eta: number; // minutes
+  eta: number;
   surge: boolean;
   deepLink: string;
 }

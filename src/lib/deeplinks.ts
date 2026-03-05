@@ -1,112 +1,8 @@
 import { Location } from "./store";
 
 // ============================================================
-// UBER - Universal links work on both iOS and Android
-// Docs: https://developer.uber.com/docs/riders/ride-requests/tutorials/deep-links/introduction
+// DEVICE DETECTION
 // ============================================================
-export function generateUberDeepLink(
-  pickup: Location,
-  destination: Location,
-  productId?: string
-): string {
-  const params = new URLSearchParams({
-    action: "setPickup",
-    "pickup[latitude]": pickup.lat.toFixed(6),
-    "pickup[longitude]": pickup.lng.toFixed(6),
-    "pickup[formatted_address]": shortenAddress(pickup.address),
-    "dropoff[latitude]": destination.lat.toFixed(6),
-    "dropoff[longitude]": destination.lng.toFixed(6),
-    "dropoff[formatted_address]": shortenAddress(destination.address),
-  });
-  if (productId) params.set("product_id", productId);
-  // m.uber.com universal link opens app on mobile, web on desktop
-  return `https://m.uber.com/ul/?${params.toString()}`;
-}
-
-// Uber product IDs by vehicle type (India, may vary by city)
-export const UBER_PRODUCTS: Record<string, string> = {
-  UberGo: "db6779d6-d8da-479f-8002-1d tried", // fallback - app picks nearest
-  UberMoto: "MOTO",
-  UberAuto: "AUTO",
-};
-
-// ============================================================
-// OLA - Universal link + app scheme
-// Book URL opens Ola app if installed, else Ola web
-// ============================================================
-export function generateOlaDeepLink(
-  pickup: Location,
-  destination: Location,
-  category?: string
-): string {
-  const params = new URLSearchParams({
-    pickup_lat: pickup.lat.toFixed(6),
-    pickup_lng: pickup.lng.toFixed(6),
-    pickup_name: shortenAddress(pickup.address),
-    drop_lat: destination.lat.toFixed(6),
-    drop_lng: destination.lng.toFixed(6),
-    drop_name: shortenAddress(destination.address),
-  });
-  if (category) params.set("category", category);
-  return `https://book.olacabs.com/?${params.toString()}`;
-}
-
-export const OLA_CATEGORIES: Record<string, string> = {
-  "Ola Mini": "mini",
-  "Ola Bike": "bike",
-  "Ola Auto": "auto",
-};
-
-// ============================================================
-// RAPIDO - Intent URL for Android, fallback to Play Store
-// Rapido doesn't have public deep links, so we use intent scheme
-// which opens the app if installed, else Play Store
-// ============================================================
-export function generateRapidoDeepLink(
-  pickup: Location,
-  destination: Location,
-  _mode?: string
-): string {
-  // Android intent URL - tries to open Rapido app, fallback to Play Store
-  if (isMobile() && isAndroid()) {
-    return `intent://ride?from_lat=${pickup.lat.toFixed(6)}&from_lng=${pickup.lng.toFixed(6)}&from_name=${encodeURIComponent(shortenAddress(pickup.address))}&to_lat=${destination.lat.toFixed(6)}&to_lng=${destination.lng.toFixed(6)}&to_name=${encodeURIComponent(shortenAddress(destination.address))}#Intent;scheme=rapido;package=com.rapido.passenger;end`;
-  }
-  // Fallback: Play Store with referrer containing ride info
-  return `https://play.google.com/store/apps/details?id=com.rapido.passenger&referrer=utm_source%3Deasyride%26pickup_lat%3D${pickup.lat}%26pickup_lng%3D${pickup.lng}%26drop_lat%3D${destination.lat}%26drop_lng%3D${destination.lng}`;
-}
-
-// ============================================================
-// NAMMA YATRI - Open-source, uses universal links
-// ============================================================
-export function generateNammaYatriDeepLink(
-  pickup: Location,
-  destination: Location
-): string {
-  return `https://nammayatri.in/ride?pickup_lat=${pickup.lat.toFixed(6)}&pickup_lng=${pickup.lng.toFixed(6)}&drop_lat=${destination.lat.toFixed(6)}&drop_lng=${destination.lng.toFixed(6)}`;
-}
-
-// ============================================================
-// HELPERS
-// ============================================================
-export function getPlayStoreLink(service: string): string {
-  const ids: Record<string, string> = {
-    uber: "com.ubercab",
-    ola: "com.olacabs.customer",
-    rapido: "com.rapido.passenger",
-    nammayatri: "in.juspay.nammayatri",
-  };
-  return `https://play.google.com/store/apps/details?id=${ids[service] || ids.uber}`;
-}
-
-export function getAppStoreLink(service: string): string {
-  const ids: Record<string, string> = {
-    uber: "id368677368",
-    ola: "id539179365",
-    rapido: "id1476983922",
-  };
-  return `https://apps.apple.com/in/app/${ids[service] || ids.uber}`;
-}
-
 export function isMobile(): boolean {
   if (typeof navigator === "undefined") return false;
   return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(
@@ -125,11 +21,122 @@ export function isIOS(): boolean {
 }
 
 function shortenAddress(address: string): string {
-  // Limit address to prevent URL issues
   return address.length > 80 ? address.substring(0, 80) : address;
 }
 
-// Main function to generate deep link for a ride
+// ============================================================
+// UBER - Universal links work on both iOS and Android
+// m.uber.com/ul opens the app if installed, web otherwise
+// ============================================================
+export function generateUberDeepLink(
+  pickup: Location,
+  destination: Location
+): string {
+  const params = new URLSearchParams({
+    action: "setPickup",
+    "pickup[latitude]": pickup.lat.toFixed(6),
+    "pickup[longitude]": pickup.lng.toFixed(6),
+    "pickup[formatted_address]": shortenAddress(pickup.address),
+    "dropoff[latitude]": destination.lat.toFixed(6),
+    "dropoff[longitude]": destination.lng.toFixed(6),
+    "dropoff[formatted_address]": shortenAddress(destination.address),
+  });
+  return `https://m.uber.com/ul/?${params.toString()}`;
+}
+
+// ============================================================
+// OLA - Universal link that opens app if installed
+// Correct params: lat, lng (pickup), drop_lat, drop_lng (drop)
+// ============================================================
+const OLA_CATEGORIES: Record<string, string> = {
+  "Ola Bike": "bike",
+  "Ola Auto": "auto",
+  "Ola Mini": "mini",
+  "Ola Prime Sedan": "sedan",
+  "Ola Prime Plus": "sedan",
+  "Ola Prime SUV": "suv",
+};
+
+export function generateOlaDeepLink(
+  pickup: Location,
+  destination: Location,
+  modeName?: string
+): string {
+  const params = new URLSearchParams({
+    lat: pickup.lat.toFixed(6),
+    lng: pickup.lng.toFixed(6),
+    pickup_name: shortenAddress(pickup.address),
+    drop_lat: destination.lat.toFixed(6),
+    drop_lng: destination.lng.toFixed(6),
+    drop_name: shortenAddress(destination.address),
+  });
+  const cat = modeName ? OLA_CATEGORIES[modeName] : undefined;
+  if (cat) params.set("category", cat);
+
+  // Try app scheme first on mobile, fallback to web booking
+  if (isMobile()) {
+    if (isAndroid()) {
+      // Android: intent URI that opens Ola app or falls back to Play Store
+      return `intent://app/launch?${params.toString()}#Intent;scheme=olacabs;package=com.olacabs.customer;S.browser_fallback_url=${encodeURIComponent(`https://book.olacabs.com/?${params.toString()}`)};end`;
+    }
+    if (isIOS()) {
+      // iOS: try olacabs:// scheme, but use universal link as reliable fallback
+      // We use the web URL which iOS will intercept if the app is installed (Associated Domains)
+      return `https://book.olacabs.com/?${params.toString()}`;
+    }
+  }
+  return `https://book.olacabs.com/?${params.toString()}`;
+}
+
+// ============================================================
+// RAPIDO - Android intent URI, iOS App Store fallback
+// Rapido has no public deep link docs, so we use best-known schemes
+// ============================================================
+export function generateRapidoDeepLink(
+  pickup: Location,
+  destination: Location
+): string {
+  if (isMobile()) {
+    if (isAndroid()) {
+      // Android intent URI - opens Rapido app if installed, falls back to Play Store
+      const rideParams = `from_lat=${pickup.lat.toFixed(6)}&from_lng=${pickup.lng.toFixed(6)}&from_name=${encodeURIComponent(shortenAddress(pickup.address))}&to_lat=${destination.lat.toFixed(6)}&to_lng=${destination.lng.toFixed(6)}&to_name=${encodeURIComponent(shortenAddress(destination.address))}`;
+      return `intent://ride?${rideParams}#Intent;scheme=rapido;package=com.rapido.passenger;S.browser_fallback_url=${encodeURIComponent("https://play.google.com/store/apps/details?id=com.rapido.passenger")};end`;
+    }
+    if (isIOS()) {
+      // iOS: try rapido:// scheme via a redirect approach
+      // Since Rapido doesn't have universal links, we open the app store page
+      // which will show "Open" if app is installed
+      return "https://apps.apple.com/in/app/rapido-bike-taxi-auto-cabs/id1198464606";
+    }
+  }
+  // Desktop fallback
+  return "https://www.rapido.bike/";
+}
+
+// ============================================================
+// STORE LINKS
+// ============================================================
+export function getPlayStoreLink(service: string): string {
+  const ids: Record<string, string> = {
+    uber: "com.ubercab",
+    ola: "com.olacabs.customer",
+    rapido: "com.rapido.passenger",
+  };
+  return `https://play.google.com/store/apps/details?id=${ids[service] || ids.uber}`;
+}
+
+export function getAppStoreLink(service: string): string {
+  const ids: Record<string, string> = {
+    uber: "id368677368",
+    ola: "id539179365",
+    rapido: "id1198464606",
+  };
+  return `https://apps.apple.com/in/app/${ids[service] || ids.uber}`;
+}
+
+// ============================================================
+// MAIN DISPATCHER
+// ============================================================
 export function generateDeepLink(
   service: string,
   pickup: Location,
@@ -140,14 +147,12 @@ export function generateDeepLink(
     case "uber":
       return generateUberDeepLink(pickup, destination);
     case "ola":
-      return generateOlaDeepLink(
-        pickup,
-        destination,
-        modeName ? OLA_CATEGORIES[modeName] : undefined
-      );
+      return generateOlaDeepLink(pickup, destination, modeName);
     case "rapido":
-      return generateRapidoDeepLink(pickup, destination, modeName);
+      return generateRapidoDeepLink(pickup, destination);
     default:
-      return getPlayStoreLink(service);
+      return isMobile() && isIOS()
+        ? getAppStoreLink(service)
+        : getPlayStoreLink(service);
   }
 }

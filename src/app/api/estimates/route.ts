@@ -16,47 +16,26 @@ interface PricingRule {
 
 const PRICING: Record<string, Record<string, PricingRule>> = {
   uber: {
-    // Bikes
     "Uber Moto":       { baseFare: 25,  perKm: 5.5,  perMin: 0.75, minFare: 30,  surgeChance: 0.15 },
-    // Autos
     "Uber Auto":       { baseFare: 40,  perKm: 9,    perMin: 1,    minFare: 45,  surgeChance: 0.20 },
-    // Economy cars
     "UberGo":          { baseFare: 50,  perKm: 11,   perMin: 1.5,  minFare: 65,  surgeChance: 0.30 },
     "UberGo Sedan":    { baseFare: 60,  perKm: 12,   perMin: 1.5,  minFare: 75,  surgeChance: 0.30 },
-    // Comfort
-    "Uber Comfort":    { baseFare: 80,  perKm: 14,   perMin: 2,    minFare: 100, surgeChance: 0.25 },
-    // Premium
     "Uber Premier":    { baseFare: 100, perKm: 16,   perMin: 2,    minFare: 150, surgeChance: 0.25 },
     "Uber Black":      { baseFare: 150, perKm: 19,   perMin: 2.5,  minFare: 200, surgeChance: 0.15 },
-    // XL / SUV
     "UberXL":          { baseFare: 110, perKm: 17,   perMin: 2.5,  minFare: 150, surgeChance: 0.25 },
-    // Shared
-    "Uber Pool":       { baseFare: 35,  perKm: 8,    perMin: 1,    minFare: 45,  surgeChance: 0.10 },
   },
   ola: {
-    // Bikes
     "Ola Bike":        { baseFare: 20,  perKm: 5,    perMin: 0.5,  minFare: 30,  surgeChance: 0.10 },
-    // Autos
     "Ola Auto":        { baseFare: 40,  perKm: 9,    perMin: 1,    minFare: 40,  surgeChance: 0.20 },
-    // Economy
     "Ola Mini":        { baseFare: 55,  perKm: 11,   perMin: 1.5,  minFare: 60,  surgeChance: 0.30 },
-    "Ola Sedan":       { baseFare: 65,  perKm: 12.5, perMin: 1.5,  minFare: 80,  surgeChance: 0.28 },
-    // Comfort / Premium
-    "Ola Comfort":     { baseFare: 80,  perKm: 14,   perMin: 2,    minFare: 100, surgeChance: 0.25 },
     "Ola Prime Sedan": { baseFare: 100, perKm: 15,   perMin: 2,    minFare: 120, surgeChance: 0.20 },
+    "Ola Prime Plus":  { baseFare: 110, perKm: 16,   perMin: 2,    minFare: 140, surgeChance: 0.18 },
     "Ola Prime SUV":   { baseFare: 130, perKm: 18,   perMin: 2.5,  minFare: 180, surgeChance: 0.18 },
-    "Ola Lux":         { baseFare: 170, perKm: 22,   perMin: 3,    minFare: 250, surgeChance: 0.12 },
-    // Shared
-    "Ola Share":       { baseFare: 35,  perKm: 7.5,  perMin: 1,    minFare: 40,  surgeChance: 0.10 },
   },
   rapido: {
-    // Bikes
     "Rapido Bike":     { baseFare: 20,  perKm: 3,    perMin: 0.25, minFare: 25,  surgeChance: 0 },
-    // Autos
     "Rapido Auto":     { baseFare: 35,  perKm: 8.5,  perMin: 0.75, minFare: 35,  surgeChance: 0 },
-    // Cabs (available in select cities)
-    "Rapido Cab Eco":  { baseFare: 45,  perKm: 10,   perMin: 1,    minFare: 55,  surgeChance: 0 },
-    "Rapido Cab":      { baseFare: 55,  perKm: 11.5, perMin: 1.5,  minFare: 70,  surgeChance: 0 },
+    "Rapido Cab":      { baseFare: 49,  perKm: 11,   perMin: 1.25, minFare: 59,  surgeChance: 0 },
   },
 };
 
@@ -68,26 +47,20 @@ const MODE_META: Record<string, { icon: VehicleType; tag?: string }> = {
   "Uber Auto":       { icon: "auto" },
   "UberGo":          { icon: "car" },
   "UberGo Sedan":    { icon: "sedan" },
-  "Uber Comfort":    { icon: "sedan", tag: "Comfort" },
   "Uber Premier":    { icon: "premium", tag: "Premium" },
   "Uber Black":      { icon: "premium", tag: "Luxury" },
   "UberXL":          { icon: "suv", tag: "6-seater" },
-  "Uber Pool":       { icon: "shared", tag: "Shared" },
   // Ola
   "Ola Bike":        { icon: "bike" },
   "Ola Auto":        { icon: "auto" },
   "Ola Mini":        { icon: "car" },
-  "Ola Sedan":       { icon: "sedan" },
-  "Ola Comfort":     { icon: "sedan", tag: "Comfort" },
   "Ola Prime Sedan": { icon: "premium", tag: "Premium" },
+  "Ola Prime Plus":  { icon: "sedan", tag: "No-Cancel" },
   "Ola Prime SUV":   { icon: "suv", tag: "Premium" },
-  "Ola Lux":         { icon: "premium", tag: "Luxury" },
-  "Ola Share":       { icon: "shared", tag: "Shared" },
   // Rapido
   "Rapido Bike":     { icon: "bike" },
   "Rapido Auto":     { icon: "auto" },
-  "Rapido Cab Eco":  { icon: "car", tag: "Economy" },
-  "Rapido Cab":      { icon: "sedan" },
+  "Rapido Cab":      { icon: "car" },
 };
 
 function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -120,9 +93,10 @@ function calculateEstimate(rule: PricingRule, distKm: number, durationMin: numbe
   const rawFare = rule.baseFare + rule.perKm * roadDist + rule.perMin * durationMin;
   const finalFare = Math.max(rawFare * surgeMultiplier * nightMultiplier, rule.minFare);
 
+  const price = Math.round(finalFare);
   return {
-    priceMin: Math.round(finalFare * 0.92),
-    priceMax: Math.round(finalFare * 1.08),
+    priceMin: price,
+    priceMax: price,
     surge: surgeMultiplier > 1.15,
   };
 }
