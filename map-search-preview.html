@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Location Search Feature Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 2.5em;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .preview-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .preview-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .preview-title {
+            background: linear-gradient(135deg, #FF6B35 0%, #FF8C5E 100%);
+            color: white;
+            padding: 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .preview-content {
+            padding: 20px;
+            background: #f8f9fa;
+            min-height: 400px;
+            position: relative;
+        }
+
+        .phone-mockup {
+            width: 100%;
+            max-width: 320px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 40px;
+            border: 12px solid #333;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .phone-screen {
+            background: #f5f5f5;
+            width: 100%;
+            aspect-ratio: 9 / 19;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .search-box {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .search-box input {
+            border: none;
+            outline: none;
+            flex: 1;
+            font-size: 13px;
+        }
+
+        .search-icon {
+            color: #999;
+            font-size: 16px;
+        }
+
+        .result-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 6px 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+            color: #333;
+        }
+
+        .result-item:hover {
+            background: #f0f0f0;
+            border-color: #FF6B35;
+        }
+
+        .address-bar {
+            background: white;
+            border: 2px solid #FF6B35;
+            border-radius: 12px;
+            padding: 12px;
+            margin: 8px 0;
+            font-size: 12px;
+        }
+
+        .address-label {
+            color: #FF6B35;
+            font-size: 10px;
+            font-weight: bold;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .address-text {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .coordinates {
+            color: #999;
+            font-size: 10px;
+            margin-top: 4px;
+        }
+
+        .map-placeholder {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            margin: 8px 0;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .confirm-button {
+            background: linear-gradient(135deg, #FF6B35 0%, #FF8C5E 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 14px;
+            width: 100%;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: transform 0.2s;
+        }
+
+        .confirm-button:active {
+            transform: scale(0.98);
+        }
+
+        .feature-list {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+        }
+
+        .feature-list h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .feature-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .feature-icon {
+            font-size: 24px;
+            margin-right: 15px;
+            min-width: 30px;
+        }
+
+        .feature-content h3 {
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 1.05em;
+        }
+
+        .feature-content p {
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .testing-section {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+        }
+
+        .testing-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .test-step {
+            background: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #FF6B35;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+
+        .test-step h3 {
+            color: #FF6B35;
+            margin-bottom: 8px;
+            font-size: 1em;
+        }
+
+        .test-step p {
+            color: #666;
+            font-size: 0.9em;
+            margin: 5px 0;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin-top: 10px;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 50px;
+            padding: 30px 0;
+        }
+
+        .cta-button {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 20px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .cta-button:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗺️ Map Location Search Feature</h1>
+
+        <div class="feature-list">
+            <h2>✨ What's New?</h2>
+            <div class="feature-item">
+                <div class="feature-icon">🔍</div>
+                <div class="feature-content">
+                    <h3>Search for Locations</h3>
+                    <p>Type any location name, landmark, or address to find it instantly. Covers all Indian cities, towns, villages, and landmarks.</p>
+                </div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">📍</div>
+                <div class="feature-content">
+                    <h3>See Results in Real-Time</h3>
+                    <p>Get up to 8 matching locations as you type with smooth animations and loading indicators.</p>
+                </div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">🎯</div>
+                <div class="feature-content">
+                    <h3>Jump to Location</h3>
+                    <p>Click any search result and the map instantly zooms to that location with a smooth animation.</p>
+                </div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">📌</div>
+                <div class="feature-content">
+                    <h3>Pin & Confirm</h3>
+                    <p>Once you've found your location, confirm it as your pickup or drop-off point.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="preview-grid">
+            <div class="preview-card">
+                <div class="preview-title">1️⃣ Map Picker Opened</div>
+                <div class="preview-content">
+                    <div class="phone-mockup">
+                        <div class="phone-screen">
+                            <div class="search-box">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" placeholder="Search locations..." readonly>
+                            </div>
+
+                            <div class="address-bar">
+                                <div class="address-label">Set Pickup Point</div>
+                                <div class="address-text">Move the map to select location</div>
+                            </div>
+
+                            <div class="map-placeholder">Interactive Map</div>
+
+                            <button class="confirm-button">✓ Confirm Pickup Location</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="preview-card">
+                <div class="preview-title">2️⃣ Typing in Search</div>
+                <div class="preview-content">
+                    <div class="phone-mockup">
+                        <div class="phone-screen">
+                            <div class="search-box">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" value="Haji Ali" readonly>
+                            </div>
+
+                            <div class="result-item">Haji Ali, Mumbai</div>
+                            <div class="result-item">Haji Ali Dargah, Mumbai</div>
+                            <div class="result-item">Haji Ali (Area), Mumbai</div>
+
+                            <div class="address-bar">
+                                <div class="address-label">Set Pickup Point</div>
+                                <div class="address-text">Move the map to select location</div>
+                            </div>
+
+                            <div class="map-placeholder">Interactive Map</div>
+
+                            <button class="confirm-button">✓ Confirm Pickup Location</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="preview-card">
+                <div class="preview-title">3️⃣ Location Selected</div>
+                <div class="preview-content">
+                    <div class="phone-mockup">
+                        <div class="phone-screen">
+                            <div class="search-box">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" placeholder="Search locations..." readonly>
+                            </div>
+
+                            <div class="address-bar">
+                                <div class="address-label">Set Pickup Point</div>
+                                <div class="address-text">Haji Ali, Mumbai</div>
+                                <div class="coordinates">19.0190°N, 72.8253°E</div>
+                            </div>
+
+                            <div class="map-placeholder">Map centered on<br>Haji Ali 📍</div>
+
+                            <button class="confirm-button">✓ Confirm Pickup Location</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="testing-section">
+            <h2>🧪 How to Test</h2>
+
+            <div class="test-step">
+                <h3>Step 1: Start Development Server</h3>
+                <p>Run the following command in your terminal:</p>
+                <div class="code-block">npm run dev</div>
+            </div>
+
+            <div class="test-step">
+                <h3>Step 2: Open Application</h3>
+                <p>Visit <strong>http://localhost:3000</strong> in your web browser</p>
+            </div>
+
+            <div class="test-step">
+                <h3>Step 3: Test the Search Feature</h3>
+                <p>1. Click on "Enter pickup location" or "Enter drop location"</p>
+                <p>2. Type a location name in the search box (e.g., "Mumbai", "Haji Ali", "Delhi Airport")</p>
+                <p>3. Wait for results to appear (should take ~400ms after you stop typing)</p>
+                <p>4. Click on any result to jump to that location</p>
+                <p>5. The address bar should update with the selected location</p>
+                <p>6. Click "Confirm Pickup/Drop Location" to save</p>
+            </div>
+
+            <div class="test-step">
+                <h3>What to Look For:</h3>
+                <p>✅ Search box appears at the top of the map picker</p>
+                <p>✅ Results dropdown shows up smoothly with animation</p>
+                <p>✅ Clicking a result zooms the map to that location</p>
+                <p>✅ Address updates automatically</p>
+                <p>✅ Search works together with manual map dragging</p>
+                <p>✅ Confirm button works after location is selected</p>
+            </div>
+
+            <div class="test-step">
+                <h3>Try These Searches:</h3>
+                <div class="code-block">• Mumbai
+• Haji Ali, Mumbai
+• Delhi Airport
+• Bangalore Metro
+• India Gate
+• Taj Mahal
+• Your local landmark</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <h2>Ready to Test? 🚀</h2>
+            <p style="margin: 10px 0 20px 0; font-size: 16px;">The feature is ready to use. Open your browser and test it now!</p>
+            <a href="http://localhost:3000" class="cta-button">Open EasyRide App →</a>
+        </div>
+    </div>
+</body>
+</html>

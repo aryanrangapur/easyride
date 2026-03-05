@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Check, X, Crosshair, Loader2, Minus, Plus, Layers } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Check, X, Crosshair, Loader2, Minus, Plus, Layers, Search } from "lucide-react";
 import { Location } from "@/lib/store";
-import { reverseGeocode } from "@/lib/geocode";
+import { reverseGeocode, geocodeSearch, GeocodeSuggestion } from "@/lib/geocode";
 import L from "leaflet";
 
 const PICKUP_ICON_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="28" viewBox="0 0 20 28"><path d="M10 0C4.5 0 0 4.5 0 10c0 7.5 10 18 10 18s10-10.5 10-18C20 4.5 15.5 0 10 0z" fill="%2322c55e"/><circle cx="10" cy="10" r="4" fill="white"/></svg>`)}`;
@@ -55,8 +55,13 @@ export default function MapPicker({ mode, pickup, destination, onConfirm, onClos
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [tileKey, setTileKey] = useState<keyof typeof TILE_LAYERS>("streets");
   const [showLayers, setShowLayers] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchResults, setSearchResults] = useState<GeocodeSuggestion[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const getDefaultCenter = useCallback((): [number, number] => {
     if (mode === "drop" && pickup) return [pickup.lat, pickup.lng];
@@ -166,6 +171,40 @@ export default function MapPicker({ mode, pickup, destination, onConfirm, onClos
   const handleZoomIn = () => mapRef.current?.zoomIn();
   const handleZoomOut = () => mapRef.current?.zoomOut();
 
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    setIsSearching(true);
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const results = await geocodeSearch(query);
+        setSearchResults(results);
+        setShowSearchResults(true);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 400);
+  };
+
+  const handleSelectLocation = (result: GeocodeSuggestion) => {
+    const lat = parseFloat(result.lat);
+    const lng = parseFloat(result.lon);
+    if (mapRef.current) {
+      mapRef.current.flyTo([lat, lng], 16, { duration: 1.2 });
+    }
+    setSearchQuery("");
+    setShowSearchResults(false);
+    setSearchResults([]);
+  };
+
   const handleConfirm = () => {
     if (!coords || !address) return;
     onConfirm({ address, lat: coords.lat, lng: coords.lng });
@@ -200,9 +239,55 @@ export default function MapPicker({ mode, pickup, destination, onConfirm, onClos
         </div>
       </div>
 
-      {/* Top address bar */}
+      {/* Top search and address bar */}
       <div className="absolute top-0 left-0 right-0 safe-top" style={{ zIndex: 1001 }}>
-        <div className="mx-3 mt-3">
+        <div className="mx-3 mt-3 space-y-2">
+          {/* Search bar */}
+          <motion.div
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.05 }}
+            className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl shadow-black/15 dark:shadow-black/40 border border-black/5 dark:border-white/10 px-4 py-3 flex items-center gap-3"
+          >
+            <Search className="w-5 h-5 text-muted flex-shrink-0" />
+            <input
+              type="text"
+              placeholder="Search locations..."
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="flex-1 bg-transparent text-[14px] outline-none text-foreground placeholder-muted"
+            />
+            {isSearching && (
+              <Loader2 className="w-4 h-4 text-muted animate-spin flex-shrink-0" />
+            )}
+          </motion.div>
+
+          {/* Search results dropdown */}
+          <AnimatePresence>
+            {showSearchResults && searchResults.length > 0 && (
+              <motion.div
+                initial={{ y: -10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -10, opacity: 0 }}
+                className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl shadow-black/15 dark:shadow-black/40 border border-black/5 dark:border-white/10 overflow-hidden max-h-64 overflow-y-auto"
+              >
+                {searchResults.map((result) => (
+                  <motion.button
+                    key={result.place_id}
+                    onClick={() => handleSelectLocation(result)}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full px-4 py-3 text-left border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
+                  >
+                    <p className="text-[13px] font-medium text-foreground line-clamp-1">
+                      {result.display_name}
+                    </p>
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Address bar */}
           <motion.div
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
